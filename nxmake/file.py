@@ -1,41 +1,53 @@
-import glob
-import os
 from typing import List, Dict
 
-
-def find_files(extension: str) -> List[str]:
-    # File files in the current directory with the extension: 'extension'
-    return find_files_in(os.getcwd(), extension)
+import glob
+import os
 
 
-def find_files_in(directory : str, extension: str) -> List[str]:
-    # Find files in 'directory' with extension: 'extension'
+def find_files(ext: str, where=None) -> List[str]:
+    # Set search directory
+    if where is None:
+        search_dir = os.getcwd()
+    else:
+        search_dir = where
+
+    prev = os.getcwd()
+    os.chdir(search_dir)
+
+    # Add starting dot, if necessary
+    if ext[0] != '.':
+        ext = "." + ext
+
     result = []
-    os.chdir(directory)
 
-    for file in glob.glob("*" + extension):
-        result.append(directory + "/" + file)
+    for file in glob.glob("*" + ext):
+        if search_dir[len(search_dir) - 1] is '/':
+            result.append(search_dir + file)
+        else:
+            result.append(search_dir + "/" + file)
 
+    # Fix current directory
+    os.chdir(prev)
     return result
 
 
-def inplace_map(files: List[str]) -> Dict[str, str]:
-    # Create a default mapping of *.{c,cpp,...} to *.o (inplace build)
-    result = {}
-    for file in files:
-        result[file] = os.path.splitext(file)[0] + ".o"
-
-    return result
-
-
-def outplace_map(files : List[str], build_dir : str) -> Dict[str, str]:
-    # Create a mapping of *.{c,cpp,...} to build_dir/*.o (out-of-place build)
+def default_map(src_files: List[str], where: str = None) -> Dict[str, str]:
     result = {}
 
-    for file in files:
-        f_name_ext = str(os.path.basename(file))
-        f_name_none = os.path.splitext(f_name_ext)[0]
+    # Handle in-place vs out-of-place build mappings
+    if where is None:
+        for file in src_files:
+            result[file] = os.path.splitext(file)[0] + ".o"
 
-        result[file] = build_dir + "/" + f_name_none + ".o"
+        return result
+    else:
+        for file in src_files:
+            with_ext = str(os.path.basename(file))
+            no_ext = os.path.splitext(with_ext)[0]
 
-    return result
+            if where[len(where) - 1] is '/':
+                result[file] = where + no_ext + ".o"
+            else:
+                result[file] = where + "/" + no_ext + ".o"
+
+        return result
