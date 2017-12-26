@@ -23,13 +23,26 @@ class Linker:
         return call([self.ld_exe, *self.flags, *obj, "-o", target]) == 0
 
 
+class Archiver:
+    def __init__(self, ar_exe, flags: List[str]):
+        self.ar_exe = ar_exe
+        self.flags = flags
+
+    def archive(self, obj: List[str], target: str) -> bool:
+        return call([self.ar_exe, *self.flags, target, *obj]) == 0
+
+
 class Toolchain:
-    def __init__(self, cc: Compiler, ld: Linker):
+    def __init__(self, cc: Compiler, ld: Linker, ar: Archiver):
         self.cc = cc
         self.ld = ld
+        self.ar = ar
 
     def compile(self, src: str, target: str) -> bool:
         return self.cc.compile(src, target)
 
     def link(self, obj: List[str], target: str) -> bool:
         return self.ld.link(obj, target)
+
+    def archive(self, obj: List[str], target: str) -> bool:
+        return self.ar.archive(obj, target)
