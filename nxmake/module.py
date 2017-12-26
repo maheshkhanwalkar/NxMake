@@ -24,6 +24,7 @@ class Module(ABC):
         return self.name
 
 
+# Module with no modular dependencies
 class BaseModule(Module):
 
     def __init__(self, name: str, obj_map: Dict[str, str], tool: Toolchain, link_target: str = None):
@@ -42,31 +43,45 @@ class BaseModule(Module):
         processed = str(os.path.basename(target))
         print("[" + header + "] " + processed)
 
-    # TODO consolidate the duplicate compile/link stages
+    # Perform the compile step
+    def __do_compile(self, update_list: List[str]) -> bool:
+        for src in update_list:
+            self.__print_output("CC", self.obj_map[src])
+            result = self.tool.compile(src, self.obj_map[src])
+
+            if not result:
+                print(self.name + ": Compilation failed. Quiting")
+                return False
+
+        return True
+
+    # Perform the link step, if there is one
+    def __do_link(self) -> bool:
+        if self.link_target is not None:
+            print(self.name + ": Linking")
+
+            self.__print_output("LD", self.link_target)
+            result = self.tool.link(list(self.obj_map.values()), self.link_target)
+
+            if not result:
+                print(self.name + ": Linking failed. Quiting")
+                return False
+
+        return True
+
     def update(self, force: bool = False) -> bool:
         # Force recompile (and possibly relink)
         if force:
             print(self.name + ": Compiling")
+            result = self.__do_compile(list(self.obj_map.keys()))
 
-            # Compile step
-            for src in self.obj_map.keys():
-                self.__print_output("CC", self.obj_map[src])
-                result = self.tool.compile(src, self.obj_map[src])
+            if not result:
+                return False
 
-                if not result:
-                    print(self.name + ": Compilation failed. Quiting")
-                    return False
+            result = self.__do_link()
 
-            # Link step
-            if not (self.link_target is None):
-                print(self.name + ": Linking")
-
-                self.__print_output("LD", self.link_target)
-                result = self.tool.link(list(self.obj_map.values()), self.link_target)
-
-                if not result:
-                    print(self.name + ": Linking failed. Quiting")
-                    return False
+            if not result:
+                return False
 
             return True
 
@@ -74,7 +89,16 @@ class BaseModule(Module):
         update_list = []
 
         for src in self.obj_map.keys():
+            if not os.path.exists(src):
+                print(self.name + ": Error. " + src + " does not exist")
+                return False
+
             src_time = os.path.getmtime(src)
+
+            if not os.path.exists(self.obj_map[src]):
+                update_list.append(src)
+                continue
+
             tgt_time = os.path.getmtime(self.obj_map[src])
 
             # Need to update
@@ -85,25 +109,15 @@ class BaseModule(Module):
         if len(update_list) != 0:
             print(self.name + ": Compiling")
 
-            # Compile step
-            for src in update_list:
-                self.__print_output("CC", self.obj_map[src])
-                result = self.tool.compile(src, self.obj_map[src])
+            result = self.__do_compile(update_list)
 
-                if not result:
-                    print(self.name + ": Compilation failed. Quiting")
-                    return False
+            if not result:
+                return False
 
-            # Link step
-            if not (self.link_target is None):
-                print(self.name + ": Linking")
+            result = self.__do_link()
 
-                self.__print_output("LD", self.link_target)
-                result = self.tool.link(list(self.obj_map.values()), self.link_target)
-
-                if not result:
-                    print(self.name + ": Linking failed. Quiting")
-                    return False
+            if not result:
+                return False
 
         else:
             print(self.name + ": Nothing to update")
