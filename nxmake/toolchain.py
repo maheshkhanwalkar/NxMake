@@ -7,7 +7,10 @@ class Compiler:
         self.cc_exe = cc_exe
         self.flags = flags
 
-    def compile(self, src: str, target: str) -> bool:
+    def compile(self, src: str, target: str, verbose: bool = False) -> bool:
+        if verbose:
+            print(self.cmd_str(src, target))
+
         return call([self.cc_exe, *self.flags, "-c", src, "-o", target]) == 0
 
     def cmd_str(self, src: str, target: str) -> str:
@@ -19,8 +22,14 @@ class Linker:
         self.ld_exe = ld_exe
         self.flags = flags
 
-    def link(self, obj: List[str], target: str) -> bool:
+    def link(self, obj: List[str], target: str, verbose: bool = False) -> bool:
+        if verbose:
+            print(self.cmd_str(obj, target))
+
         return call([self.ld_exe, *self.flags, *obj, "-o", target]) == 0
+
+    def cmd_str(self, obj: List[str], target: str) -> str:
+        return self.ld_exe + " " + ' '.join(self.flags) + " " + ' '.join(obj) + " -o " + target
 
 
 class Archiver:
@@ -28,21 +37,28 @@ class Archiver:
         self.ar_exe = ar_exe
         self.flags = flags
 
-    def archive(self, obj: List[str], target: str) -> bool:
+    def archive(self, obj: List[str], target: str, verbose: bool = False) -> bool:
+        if verbose:
+            print(self.cmd_str(obj, target))
+
         return call([self.ar_exe, *self.flags, target, *obj]) == 0
+
+    def cmd_str(self, obj: List[str], target: str) -> str:
+        return self.ar_exe + " " + ' '.join(self.flags) + " " + target + " " + ' '.join(obj)
 
 
 class Toolchain:
-    def __init__(self, cc: Compiler, ld: Linker, ar: Archiver):
+    def __init__(self, cc: Compiler, ld: Linker, ar: Archiver, verbose: bool = False):
         self.cc = cc
         self.ld = ld
         self.ar = ar
+        self.verbose = verbose
 
     def compile(self, src: str, target: str) -> bool:
-        return self.cc.compile(src, target)
+        return self.cc.compile(src, target, self.verbose)
 
     def link(self, obj: List[str], target: str) -> bool:
-        return self.ld.link(obj, target)
+        return self.ld.link(obj, target, self.verbose)
 
     def archive(self, obj: List[str], target: str) -> bool:
-        return self.ar.archive(obj, target)
+        return self.ar.archive(obj, target, self.verbose)

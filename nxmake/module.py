@@ -75,9 +75,11 @@ class Module(ABC):
                     print("Error. Cannot link executable into another file")
                     return False
                 elif obj.obj_type is ObjType.obj:
-                    link_flags.append(obj)
-                else:
-                    link_flags.append("-l:" + obj.target)
+                    link_flags.append(obj.target)
+
+            for obj in obj_src:
+                if obj.obj_type is ObjType.static_lib or obj.obj_type is ObjType.shared_lib:
+                    link_flags.append(obj.target)
 
             self.__print_output("LD", target.target)
             result = self.tool.link(link_flags, target.target)
@@ -125,31 +127,35 @@ class BasicModule(Module):
 
     def update(self, force: bool = False) -> bool:
         work: Dict[str, str] = {}
+        print(self.name + ": Processing")
 
         if force:
             work = self.obj_map
         else:
             # Determine what needs to be compiled
             for src in self.obj_map:
-                if os.path.isfile(src):
+                if not os.path.isfile(self.obj_map[src]):
                     work[src] = self.obj_map[src]
                     continue
 
                 # Source is newer
-                if os.path.getmtime(src) > os.path.getmtime(self.obj_map[src])
+                if os.path.getmtime(src) > os.path.getmtime(self.obj_map[src]):
                     work[src] = self.obj_map[src]
 
-        result = super()._do_compile(work)
+        if len(work) is not 0:
+            result = super()._do_compile(work)
 
-        if not result:
-            print(self.name + ": Build failed. Quitting")
-            return False
+            if not result:
+                print(self.name + ": Build failed. Quitting")
+                return False
+        else:
+            print(self.name + ": Nothing to compile")
 
         # Perform link step (if needed)
         if self.target is not None:
             need_link: bool = False
 
-            if os.path.exists(self.target.target) is not True:
+            if not os.path.exists(self.target.target):
                 need_link = True
             else:
                 for obj in self.obj_map.values():
@@ -160,7 +166,7 @@ class BasicModule(Module):
             if need_link:
                 obj_list: List[ObjInfo] = []
 
-                for obj in self.obj_map:
+                for obj in self.obj_map.values():
                     obj_list.append(ObjInfo(obj, ObjType.obj))
 
                 result = super()._do_link(obj_list, self.target)
@@ -186,10 +192,10 @@ class BasicModule(Module):
 
 class DepModule(Module):
 
-    def __init__(self, name: str, tool: Toolchain, dep_list: List[Module], link_tgt: LinkTarget):
+    def __init__(self, name: str, tool: Toolchain, dep_list: List[Module], target: ObjInfo):
         super().__init__(name, tool)
         self.dep_list = dep_list
-        self.link_tgt = link_tgt
+        self.target = target
 
     def update(self, force: bool = False) -> bool:
         print(self.name + ": Processing")
@@ -201,22 +207,42 @@ class DepModule(Module):
                 print(self.name + ": Build Failed. Quiting")
                 return False
 
-        result = self._do_link()
+        need_link = False
 
-        if not result:
-            print(self.name + ": Link Failed. Quiting")
-            return False
+        if not os.path.exists(self.target.target):
+            need_link = True
+        else:
+            for mod in self.dep_list:
+                obj_list = mod.output()
 
-        return True
+                for obj in obj_list:
+                    if os.path.getmtime(obj.target) > os.path.getmtime(self.target.target):
+                        need_link = True
+                        break
 
-    def clean(self) -> bool:
-        for mod in self.dep_list:
-            result = mod.clean()
+                if need_link:
+                    break
+
+        if need_link:
+            total_list: List[ObjInfo] = []
+
+            for mod in self.dep_list:
+                total_list.extend(mod.output())
+
+            result = super()._do_link(total_list, self.target)
 
             if not result:
+                print(self.name + ": Link Failed. Quitting")
                 return False
 
         return True
 
-    def output(self) -> List[str]:
-        return [self.link_tgt.get_target()]
+    def clean(self) -> None:
+        for mod in self.dep_list:
+            mod.clean()
+
+        if os.path.exists(self.target.target):
+            os.remove(self.target.target)
+
+    def output(self) -> List[ObjInfo]:
+        return [self.target]

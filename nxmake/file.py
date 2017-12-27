@@ -1,33 +1,38 @@
 from typing import List, Dict
-
-import glob
 import os
 
 
-def find_files(ext: str, where=None) -> List[str]:
+def find_files(ext: str, where: str=None, recursive: bool = False) -> List[str]:
     # Set search directory
     if where is None:
         search_dir = os.getcwd()
     else:
         search_dir = where
 
+    return find_multiple([ext], [search_dir], recursive)
+
+
+def find_multiple(ext_list: List[str], dir_list: List[str], recursive: bool = False) -> List[str]:
+
+    # Sanitize input
+    ext_list = list(map(lambda x: x if x[0] is '.' else "." + x, ext_list))
+    dir_list = list(map(lambda x: x if x[len(x) - 1] is '/' else x + "/", dir_list))
+
+    # Compute result
+    result: List[str] = []
     prev = os.getcwd()
-    os.chdir(search_dir)
 
-    # Add starting dot, if necessary
-    if ext[0] != '.':
-        ext = "." + ext
+    # Walk the directory tree
+    for search_dir in dir_list:
+        for root, dirs, files in os.walk(search_dir):
+            for file in files:
+                for ext in ext_list:
+                    if file.endswith(ext):
+                        result.append(os.path.join(root, file))
 
-    result = []
+            if not recursive:
+                break
 
-    for file in glob.glob("*" + ext):
-        if search_dir[len(search_dir) - 1] is '/':
-            result.append(search_dir + file)
-        else:
-            result.append(search_dir + "/" + file)
-
-    # Fix current directory
-    os.chdir(prev)
     return result
 
 
