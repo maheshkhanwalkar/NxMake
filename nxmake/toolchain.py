@@ -1,5 +1,6 @@
 from subprocess import call
 from typing import List
+import os
 
 
 class Compiler:
@@ -15,7 +16,6 @@ class Compiler:
 
     def cmd_str(self, src: str, target: str) -> str:
         return self.cc_exe + " " + ' '.join(self.flags) + " -c " + src + " -o " + target
-
 
 class Linker:
     def __init__(self, ld_exe, flags: List[str]):
@@ -62,3 +62,28 @@ class Toolchain:
 
     def archive(self, obj: List[str], target: str) -> bool:
         return self.ar.archive(obj, target, self.verbose)
+
+
+# Get the default toolchain
+def default_toolchain() -> Toolchain:
+    cc_exe: str = os.environ.get("CC")
+    cflags: str = os.environ.get("CFLAGS")
+
+    ld_exe: str = os.environ.get("LD")
+    ldflags: str = os.environ.get("LDFLAGS")
+
+    ar_exe: str = os.environ.get("AR")
+    arflags: str = os.environ.get("ARFLAGS")
+
+    if cc_exe is None:
+        cc_exe = "cc" # Guess executable
+    if ld_exe is None:
+        ld_exe = cc_exe # Default to C compiler
+    if ar_exe is None:
+        ar_exe = "ar" # Guess executable
+
+    cc = Compiler(cc_exe, [] if cflags is None else cflags.split(" "))
+    ld = Linker(ld_exe, [] if ldflags is None else ldflags.split(" "))
+    ar = Archiver(ar_exe, [] if arflags is None else arflags.split(" "))
+
+    return Toolchain(cc, ld, ar, True)
