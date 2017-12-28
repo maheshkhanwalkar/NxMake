@@ -20,7 +20,6 @@ def find_multiple(ext_list: List[str], dir_list: List[str], recursive: bool = Fa
 
     # Compute result
     result: List[str] = []
-    prev = os.getcwd()
 
     # Walk the directory tree
     for search_dir in dir_list:
