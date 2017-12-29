@@ -95,9 +95,10 @@ ar = Archiver("llvm-ar", ["rcs"])
 
 tool = Toolchain(cc, ld, ar)
 ```
-This snippet gives a practical demonstration of a `clang`-only toolchain, as it
-specifies the use of `clang++` for C++ compiler, `clang++` as the linker (with
-the use of `lld` internally), and using `llvm-ar` for archiving.
+This snippet gives a practical demonstration of a `llvm/clang`-only toolchain,
+as it specifies the use of `clang++` for C++ compiler, `libc++` for the C++
+standard library, `clang++` as the linker (with the use of `lld` internally),
+and `llvm-ar` for archiving.
 
 In addition, a `verbose` flag can be set to explicitly print out the actual
 commands being executed. It can be passed to a component of the toolchain

@@ -35,5 +35,5 @@ enumeration, as well as, useful tutorials to get started.
 Some quick tutorial links:
 
 * [Getting started](doc/tutorials/GettingStarted.md)
-* Customizing the build process
+* [Customizing the build process](doc/tutorials/CustomizeBuild.md)
 * Working with modules
