@@ -36,4 +36,4 @@ Some quick tutorial links:
 
 * [Getting started](doc/tutorials/GettingStarted.md)
 * Customizing the build process
-* Working with static libraries
+* Working with modules

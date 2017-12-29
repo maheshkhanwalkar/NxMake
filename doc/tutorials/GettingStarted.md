@@ -29,7 +29,7 @@ need a build system for just one file; however, let's just see how it would
 look.
 
 ```python
-# build.py (although name doesn't actually matter)
+# build.py (although the name doesn't actually matter)
 from nxmake.toolchain import Toolchain, default_toolchain
 from nxmake.module import BasicModule, ObjInfo, ObjType
 
@@ -148,10 +148,10 @@ cc -o example1 example1.o
 What C compiler would be invoked depends on what is the default compiler flag
 of the executing environment, that is what the **CC** environmental variable
 is set to. If it isn't set, then NxMake guesses: **cc** in **$PATH**, which
-ideally should exist. 
+ideally should exist.
 
 #### Next Tutorial
-* Customizing the build process
+* [Customizing the build process](CustomizeBuild.md)
 
 #### Documentation:
 * Module documentation
